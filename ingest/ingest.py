@@ -2,7 +2,6 @@ import psycopg2
 from sentence_transformers import SentenceTransformer
 import os
 
-
 model = SentenceTransformer('all-MiniLM-L6-v2')
 print("Model loaded")
 
@@ -39,7 +38,6 @@ def ingest_file(table_name, file_path):
             (line, embedding)
         )
     print(f"Ingested {len(lines)} entries into '{table_name}'.")
-
 
 for table, path in kb_files.items():
     ingest_file(table, path)

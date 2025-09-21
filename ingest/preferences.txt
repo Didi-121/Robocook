@@ -14,18 +14,18 @@ Mateo likes spinach.
 Mateo likes chicken curry.
 Mateo likes vanilla ice cream.
 Mateo likes blueberries.
-Mateo likes ramen.
+Mateo likes fish sticks.
 Mateo likes potatoes.
 Mateo likes hamburgers.
 Mateo likes grapes.
 Sofia likes bananas.
 Sofia likes lasagna.
-Sofia likes peas.
+Sofia likes fried chiken. 
 Sofia likes grilled cheese.
 Sofia likes lemon pie.
 Sofia likes watermelon.
 Sofia likes pad thai.
-Sofia likes corn.
+Sofia likes bean tacos.
 Sofia likes burritos.
 Sofia likes cherries.
 Diego likes pears.
@@ -34,7 +34,7 @@ Diego likes lettuce.
 Diego likes steak.
 Diego likes carrot cake.
 Diego likes pineapple.
-Diego likes pho.
+Diego likes onion rings.
 Diego likes tomatoes.
 Diego likes hot dogs.
 Diego likes raspberries.
