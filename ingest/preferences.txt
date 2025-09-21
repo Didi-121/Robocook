@@ -1,0 +1,50 @@
+Luna likes apples.
+Luna likes spaghetti.
+Luna likes broccoli.
+Luna likes salmon.
+Luna likes chocolate cake.
+Luna likes mangoes.
+Luna likes sushi.
+Luna likes carrots.
+Luna likes pizza.
+Luna likes strawberries.
+Mateo likes oranges.
+Mateo likes tacos.
+Mateo likes spinach.
+Mateo likes chicken curry.
+Mateo likes vanilla ice cream.
+Mateo likes blueberries.
+Mateo likes ramen.
+Mateo likes potatoes.
+Mateo likes hamburgers.
+Mateo likes grapes.
+Sofia likes bananas.
+Sofia likes lasagna.
+Sofia likes peas.
+Sofia likes grilled cheese.
+Sofia likes lemon pie.
+Sofia likes watermelon.
+Sofia likes pad thai.
+Sofia likes corn.
+Sofia likes burritos.
+Sofia likes cherries.
+Diego likes pears.
+Diego likes enchiladas.
+Diego likes lettuce.
+Diego likes steak.
+Diego likes carrot cake.
+Diego likes pineapple.
+Diego likes pho.
+Diego likes tomatoes.
+Diego likes hot dogs.
+Diego likes raspberries.
+Valeria likes kiwis.
+Valeria likes risotto.
+Valeria likes green beans.
+Valeria likes roast beef.
+Valeria likes brownies.
+Valeria likes papaya.
+Valeria likes falafel.
+Valeria likes cucumbers.
+Valeria likes quesadillas.
+Valeria likes plums.
