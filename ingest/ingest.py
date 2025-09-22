@@ -34,9 +34,13 @@ def ingest_file(table_name, file_path):
     for line in lines:
         embedding = model.encode(line).tolist()
         cursor.execute(
-            f"INSERT INTO {table_name} (text, embedding) VALUES (%s, %s)",
-            (line, embedding)
+            f"""
+            INSERT INTO {table_name} (text, embedding, text_vector)
+            VALUES (%s, %s, to_tsvector('english', %s))
+            """,
+            (line, embedding, line)
         )
+        
     print(f"Ingested {len(lines)} entries into '{table_name}'.")
 
 for table, path in kb_files.items():
