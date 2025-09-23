@@ -1,7 +1,8 @@
-import psycopg2
-import re
-import numpy as np
+from urllib import response
 from sentence_transformers import SentenceTransformer
+import ollama
+import psycopg2
+import numpy as np
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -10,7 +11,8 @@ logger = logging.getLogger(__name__)
 class Rag:
     def __init__(self): 
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-        logger.info("Loaded embedding model: %s", self.embedding_model)
+        logger.info(f"Loaded embedding model")
+       
         self.conn = psycopg2.connect(
             dbname='postgres',
             user='postgres',
@@ -23,9 +25,9 @@ class Rag:
         self.tables = ['ingredients', 'preferences', 'restrictions']
         self.top_k = 3
         self.alpha = 0.5  # Weighting factor for hybrid retrieval
+        self.ollama_model = "llama3.2"  
 
-
-    def rewtite_prompt(self, prompt: str) -> str:
+    def rewrite_prompt(self, prompt: str) -> str:
         pass
 
     def cache_search(self, prompt:str) -> str:
@@ -79,7 +81,20 @@ class Rag:
         
     def generate_recipe(self) -> str:
         context = self.hybrid_retrieval()
-        return context 
+        prompt = (
+            "Generate a detailed cooking recipe.\n\n"
+            f"Ingredients (must use): {', '.join(context.get('ingredients', []))}\n"
+            f"Preferences (try to satisfy): {', '.join(context.get('preferences', []))}\n"
+            f"Restrictions (avoid): {', '.join(context.get('restrictions', []))}\n\n"
+        )
+        logger.debug(f"Recipe generation prompt:\n{prompt}")
+        response = ollama.chat(
+            model=self.ollama_model,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response["message"]["content"]
 
     def start(self):
         try: 
@@ -91,7 +106,7 @@ class Rag:
                 response = similar
             """
             self.query_embedding = self.embedding_model.encode(self.raw_query).tolist()
-            task = "generate_recipe" #self.clasify_task(query)
+            task = "generate_recipe" #self.clasify_task(query_embedding)
             logger.debug(f"Classified task: {task}")
 
             if task == "generate_recipe":
@@ -110,4 +125,4 @@ class Rag:
 
 rag = Rag()
 rag.start()
-# eg. Im Luna and i want something with apple 
+# Im Luna and i want something with apple 
