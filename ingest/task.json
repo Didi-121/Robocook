@@ -1,0 +1,15 @@
+{
+  "generate_recipe": [
+    "Im person and i want something with food",
+    "person wants food with"
+  ],
+  "input_query": [
+    "save this: person likes food",
+    "save this: ingredient is available",
+    "save this: person is allergic to food"
+  ],
+  "output_query": [
+    "tell me the preferences of person",
+    "tell me if person likes food"
+  ]
+}

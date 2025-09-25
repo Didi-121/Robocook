@@ -31,7 +31,7 @@ def run_evaluation(TABLE_NAME, ids, queries, cur):
         print(f"Query: {q}")
         print(f"Expected ID: {ids[i]}")
 
-        # Cosine similarity / l2 depending on postgres index
+        # Product
         cur.execute(f"""
             SELECT id, text
             FROM {TABLE_NAME}
@@ -42,7 +42,7 @@ def run_evaluation(TABLE_NAME, ids, queries, cur):
         distance_results = cur.fetchall()
         p_cosine = precision_at_k(distance_results, ids[i] , K)
 
-        # Dot product
+        # Cosine similarity / l2 depending on postgres index
         cur.execute(f"""
             SELECT id, text
             FROM {TABLE_NAME}
