@@ -139,12 +139,31 @@ class Rag:
             """,
             (rewritten_request, embedding, rewritten_request)
         )
+        self.conn.commit()  
 
         return f"Inserted {rewritten_request} into {table}"
 
     def natural_language_output_query(self) -> str:
-        pass
-    
+        context = self.hybrid_retrieval()
+        prompt = (
+            f"You will receive a natural language request.\n"
+            f"Use only the information provided in the context below to answer.\n"
+            f"Do not invent ingredients, preferences, or restrictions that are not listed.\n"
+            f"Respond clearly and concisely based on the context.\n\n"
+            f"Context:\n"
+            f"Available ingredients: {' '.join(context.get('ingredients', []))}\n"
+            f"Preferences: {' '.join(context.get('preferences', []))}\n"
+            f"Restrictions: {' '.join(context.get('restrictions', []))}\n\n"
+            f"Request: {self.raw_query}"
+        )
+        response = ollama.chat(
+            model=self.ollama_model,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response["message"]["content"]
+
     def start(self, input_text):
         self.raw_query = input_text
         """
@@ -162,7 +181,7 @@ class Rag:
         elif task == "input_query":
             logger.info(self.natural_language_input_query())
         elif task == "output_query":
-            logger.info("Output query")
+            logger.info(self.natural_language_output_query())
         else:
             logger.warning("I'm sorry, I cannot assist with that request.")
             

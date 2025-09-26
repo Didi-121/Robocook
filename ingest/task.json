@@ -10,6 +10,7 @@
   ],
   "output_query": [
     "tell me the preferences of person",
-    "tell me if person likes food"
+    "tell me if person likes food",
+    "person likes food?"
   ]
 }
