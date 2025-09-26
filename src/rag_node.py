@@ -30,16 +30,23 @@ class Rag:
     def rewrite_prompt(self, prompt: str) -> str:
         pass
 
-    def cache_search(self, prompt:str) -> str:
+    def cache_search(self) -> str:
         pass
 
-    def clasify_task(self, query: str) -> str:
-        pass
+    def classify_task(self) -> str:
+        self.cur.execute("""
+            SELECT task_name
+            FROM task
+            ORDER BY  embedding <=> %s::vector
+            LIMIT 1;
+        """, (self.query_embedding,))
+        task = self.cur.fetchone()[0]
+        return task
 
     def hybrid_retrieval(self) -> dict[str,str]:
         results_per_table: dict[str, list[str]] = {}
-        for table in self.tables:  # self.tables = ['ingredients', 'preferences', 'restrictions']
-            #Lexical search 
+        for table in self.tables:  
+            #Lexical search using ts-rank simulating BM25
             self.cur.execute(f"""
                 SELECT id, text, ts_rank(text_vector, plainto_tsquery('english', %s)) AS rank
                 FROM {table}
@@ -57,10 +64,11 @@ class Rag:
             """, (self.query_embedding, self.query_embedding, self.top_k))
             vector_results = self.cur.fetchall()
 
-            # Merge results
+            # Merge results as { doc_id: (text, lexical_rank, vector_score) }
             scores = {}
             for doc_id, text, rank in lexical_results:
                 scores[doc_id] = {"text": text, "lexical": rank, "vector": 0}
+
             for doc_id, text, score in vector_results:
                 if doc_id not in scores:
                     scores[doc_id] = {"text": text, "lexical": 0, "vector": score}
@@ -70,11 +78,14 @@ class Rag:
             # Combine scores
             combined = []
             for doc_id, vals in scores.items():
+                #Explained formula in documentation
                 final_score = self.alpha * vals["vector"] + (1 - self.alpha) * vals["lexical"]
                 combined.append((doc_id, vals["text"], final_score))
 
-            combined.sort(key=lambda x: x[2], reverse=True)
             #Save only the top texts in dict
+            combined.sort(key=lambda x: x[2], reverse=True)
+
+            #ignore doc_id and score
             results_per_table[table] = [text for _, text, _ in combined[:self.top_k]]
 
         return results_per_table
@@ -83,11 +94,12 @@ class Rag:
         context = self.hybrid_retrieval()
         prompt = (
             "Generate a detailed cooking recipe.\n\n"
-            f"Ingredients (must use): {', '.join(context.get('ingredients', []))}\n"
+            f"Ingredients (must use): {' '.join(context.get('ingredients', []))}\n"
             f"Preferences (try to satisfy): {', '.join(context.get('preferences', []))}\n"
-            f"Restrictions (avoid): {', '.join(context.get('restrictions', []))}\n\n"
+            f"Restrictions (avoid): {'  '.join(context.get('restrictions', []))}\n\n"
         )
         logger.debug(f"Recipe generation prompt:\n{prompt}")
+
         response = ollama.chat(
             model=self.ollama_model,
             messages=[
@@ -96,33 +108,41 @@ class Rag:
         )
         return response["message"]["content"]
 
-    def start(self):
-        try: 
-            self.raw_query = input("Input: ")
-            """
-            query = rag.rewtite_prompt(query)
-            cache_score, similar = rag.cache_search(query)
-            if cache_score > n:
-                response = similar
-            """
-            self.query_embedding = self.embedding_model.encode(self.raw_query).tolist()
-            task = "generate_recipe" #self.clasify_task(query_embedding)
-            logger.debug(f"Classified task: {task}")
+    def start(self, input_text):
+        self.raw_query = input_text
+        """
+        query = rag.rewtite_prompt(query)
+        cache_score, similar = rag.cache_search(query)
+        if cache_score > n:
+            response = similar
+        """
+        self.query_embedding = self.embedding_model.encode(self.raw_query).tolist()
+        task = self.classify_task()
+        logger.debug(f"Classified task: {task}")
 
-            if task == "generate_recipe":
-                print(self.generate_recipe())
-                return 
-            elif task == "input_query":
-                return 
-            elif task == "output_query":
-                return
-            else:
-                return "I'm sorry, I cannot assist with that request."
+        if task == "generate_recipe":
+            #logger.info(self.generate_recipe())
+            logger.info("Generate recipe")
+        elif task == "input_query":
+            logger.info("Input query")
+        elif task == "output_query":
+            logger.info("Output query")
+        else:
+            logger.warning("I'm sorry, I cannot assist with that request.")
             
-        finally:
-            self.cur.close()
-            self.conn.close()
-
 rag = Rag()
-rag.start()
 # Im Luna and i want something with apple 
+
+if __name__ == "__main__":
+    rag = Rag()
+    while True:
+        try:
+            user_input = input("Enter your request (or 'exit' to quit): ")
+            rag.start(user_input)
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+            print("An error occurred. Please try again.")
+        finally:
+            logger.debug("Closing database connection")
+            rag.cur.close()
+            rag.conn.close()
