@@ -25,7 +25,7 @@ class Rag:
         self.tables = ['ingredients', 'preferences', 'restrictions']
         self.top_k = 3
         self.alpha = 0.5  # Weighting factor for hybrid retrieval
-        self.ollama_model = "llama3.2"  
+        self.ollama_model = "llama3.2:3b-instruct-q4_0"  #llama3.2
 
     def rewrite_prompt(self, prompt: str) -> str:
         pass
@@ -93,10 +93,10 @@ class Rag:
     def generate_recipe(self) -> str:
         context = self.hybrid_retrieval()
         prompt = (
-            "Generate a detailed cooking recipe.\n\n"
-            f"Ingredients (must use): {' '.join(context.get('ingredients', []))}\n"
-            f"Preferences (try to satisfy): {', '.join(context.get('preferences', []))}\n"
-            f"Restrictions (avoid): {'  '.join(context.get('restrictions', []))}\n\n"
+            "Generate only one detailed cooking recipe.\n\n"
+            f"Available ingredients: {' '.join(context.get('ingredients', []))}\n"
+            f" {' '.join(context.get('preferences', []))}\n"
+            f" {'  '.join(context.get('restrictions', []))}\n\n"
         )
         logger.debug(f"Recipe generation prompt:\n{prompt}")
 
@@ -107,7 +107,44 @@ class Rag:
             ]
         )
         return response["message"]["content"]
+    
+    def natural_language_input_query(self) -> str:
+        prompt = (
+            f"You will receive a natural language request. Your task is to:\n"
+            f"1. Identify which table from the following list best matches the request: {', '.join(self.tables)}.\n"
+            f"2. Rewrite the request using the correct format based on its type:\n"
+            f"   - If the request expresses a restriction (e.g., allergies or dislikes), use: 'dont use <ingredient> for <person>'\n"
+            f"   - If the request expresses a preference, use: '<person> likes <ingredient>'\n"
+            f"   - If the request asks about available ingredients, use: '<ingredient>'\n\n"
+            f"Return your answer in this exact format:\n"
+            f"<table_name>,<rewritten_request>\n"
+            f"Do not explain your reasoning. Do not include numbering, extra text, or line breaks.\n"
+            f"Only return the string.\n\n"
+            f"Request: {self.raw_query}"
+        )
+        response = ollama.chat(
+            model=self.ollama_model,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        table = response["message"]["content"].split(',')[0].strip()
+        rewritten_request = response["message"]["content"].split(',')[1].strip()
 
+        embedding = self.embedding_model.encode(rewritten_request).tolist()
+        self.cur.execute(
+            f"""
+            INSERT INTO {table} (text, embedding, text_vector)
+            VALUES (%s, %s, to_tsvector('english', %s))
+            """,
+            (rewritten_request, embedding, rewritten_request)
+        )
+
+        return f"Inserted {rewritten_request} into {table}"
+
+    def natural_language_output_query(self) -> str:
+        pass
+    
     def start(self, input_text):
         self.raw_query = input_text
         """
@@ -121,28 +158,30 @@ class Rag:
         logger.debug(f"Classified task: {task}")
 
         if task == "generate_recipe":
-            #logger.info(self.generate_recipe())
-            logger.info("Generate recipe")
+            logger.info(self.generate_recipe())
         elif task == "input_query":
-            logger.info("Input query")
+            logger.info(self.natural_language_input_query())
         elif task == "output_query":
             logger.info("Output query")
         else:
             logger.warning("I'm sorry, I cannot assist with that request.")
             
 rag = Rag()
-# Im Luna and i want something with apple 
 
 if __name__ == "__main__":
     rag = Rag()
-    while True:
-        try:
+    try:
+        while True:
             user_input = input("Enter your request (or 'exit' to quit): ")
+            if user_input.lower() == 'exit':
+                break
             rag.start(user_input)
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
-            print("An error occurred. Please try again.")
-        finally:
-            logger.debug("Closing database connection")
-            rag.cur.close()
-            rag.conn.close()
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+        print("An error occurred. Please try again.")
+    finally:
+        logger.debug("Closing database connection")
+        rag.cur.close()
+        rag.conn.close()
+
+# Im Luna and i want something with apple 

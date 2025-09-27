@@ -3,7 +3,6 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 import re
 
-
 # Config
 conn = psycopg2.connect(
      dbname='postgres',
