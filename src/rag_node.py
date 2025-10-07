@@ -1,9 +1,8 @@
-from urllib import response
 from sentence_transformers import SentenceTransformer
 import ollama
 import psycopg2
-import numpy as np
 import logging
+import json
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -23,15 +22,28 @@ class Rag:
         self.cur = self.conn.cursor()
         logger.info("Connected to the database successfully")
         self.tables = ['ingredients', 'preferences', 'restrictions']
+        
         self.top_k = 3
         self.alpha = 0.5  # Weighting factor for hybrid retrieval
-        self.ollama_model = "llama3.2:3b-instruct-q4_0"  #llama3.2
+        self.ollama_model = "llama3.2:3b-instruct-q4_0"  
 
-    def rewrite_prompt(self, prompt: str) -> str:
-        pass
+        self.cache_dir = "src/cache.json"
+        with open(self.cache_dir, "r") as f:
+            self.cache = json.load(f)
 
-    def cache_search(self) -> str:
-        pass
+    def save_cache(self):
+        with open(self.cache_dir, "w") as f:
+            json.dump(self.cache, f)
+
+    def get_embedding(self, text: str):
+        if text in self.cache:
+            logger.debug("Using cached embedding")
+            return self.cache[text]
+        logger.info("Computing new embedding")
+        embedding = self.embedding_model.encode(text).tolist()
+        self.cache[text] = embedding
+        self.save_cache()
+        return embedding
 
     def classify_task(self) -> str:
         self.cur.execute("""
@@ -130,8 +142,7 @@ class Rag:
         )
         table = response["message"]["content"].split(',')[0].strip()
         rewritten_request = response["message"]["content"].split(',')[1].strip()
-
-        embedding = self.embedding_model.encode(rewritten_request).tolist()
+        embedding = self.get_embedding(rewritten_request)
         self.cur.execute(
             f"""
             INSERT INTO {table} (text, embedding, text_vector)
@@ -166,13 +177,8 @@ class Rag:
 
     def start(self, input_text):
         self.raw_query = input_text
-        """
-        query = rag.rewtite_prompt(query)
-        cache_score, similar = rag.cache_search(query)
-        if cache_score > n:
-            response = similar
-        """
-        self.query_embedding = self.embedding_model.encode(self.raw_query).tolist()
+        self.query_embedding = self.get_embedding(self.raw_query)
+        
         task = self.classify_task()
         logger.debug(f"Classified task: {task}")
 
@@ -182,8 +188,7 @@ class Rag:
             logger.info(self.natural_language_input_query())
         elif task == "output_query":
             logger.info(self.natural_language_output_query())
-        else:
-            logger.warning("I'm sorry, I cannot assist with that request.")
+        
             
 rag = Rag()
 
