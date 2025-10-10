@@ -13,7 +13,22 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db-init:/docker-entrypoint-initdb.d  # Opcional: para activar pgvector automáticamente
+      - ./db-init:/docker-entrypoint-initdb.d
+
+  robocook_app:
+    build:
+      context: .
+      dockerfile: recipe_generation/Dockerfile.robocook
+    container_name: robocook_main
+    restart: unless-stopped
+    environment:
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./recipe_generation/src:/workspace/src
+      - ./ingest:/workspace/ingest
+    working_dir: /workspace
+    depends_on:
+      - postgres
 
 volumes:
   pgdata:

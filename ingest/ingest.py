@@ -8,7 +8,7 @@ print("Model loaded")
 
 # PostgreSQL connection
 conn = psycopg2.connect(
-    dbname='postgres',
+    dbname='knowledge_bases',
     user='postgres',
     password='postgres',
     host='localhost',
@@ -43,10 +43,10 @@ def ingest_file(table_name, file_path):
         embedding = model.encode(line).tolist()
         cursor.execute(
             f"""
-            INSERT INTO {table_name} (text, embedding, text_vector)
-            VALUES (%s, %s, to_tsvector('english', %s))
+            INSERT INTO {table_name} (text, embedding)
+            VALUES (%s, %s)
             """,
-            (line, embedding, line)
+            (line, embedding)
         )
         
     print(f"Ingested {len(lines)} entries into '{table_name}'.")
