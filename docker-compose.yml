@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: pgvector/pgvector:pg15
@@ -14,6 +12,22 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db-init:/docker-entrypoint-initdb.d
+  ollama:
+      image: ollama/ollama:latest
+      container_name: ollama
+      restart: unless-stopped
+      ports:
+        - "11434:11434"
+      volumes:
+        - ollama_data:/root/.ollama
+      environment:
+        - OLLAMA_HOST=0.0.0.0
+      entrypoint: >
+        sh -c "
+          ollama serve & 
+          sleep 5 && 
+          ollama pull llama3.2:3b-instruct-q4_0 && 
+          wait"
 
   robocook_app:
     build:
@@ -24,11 +38,14 @@ services:
     environment:
       - ROS_DOMAIN_ID=0
     volumes:
-      - ./recipe_generation/src:/workspace/src
-      - ./ingest:/workspace/ingest
+      - .:/workspace
     working_dir: /workspace
     depends_on:
       - postgres
+      - ollama
+    tty: true          
+    stdin_open: true   
 
 volumes:
   pgdata:
+  ollama_data:

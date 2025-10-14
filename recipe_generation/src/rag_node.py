@@ -4,6 +4,7 @@ import psycopg2
 import logging
 import json
 import os
+import time 
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ class Rag:
             dbname='knowledge_bases',
             user='postgres',
             password='postgres',
-            host='localhost',
+            host='postgres',
             port='5432'
         )
         self.cur = self.conn.cursor()
@@ -26,13 +27,39 @@ class Rag:
         
         self.top_k = 3
         self.alpha = 0.5  # Weighting factor for hybrid retrieval
+
+        self.ollama_client = ollama.Client(host='http://ollama:11434') 
         self.ollama_model = "llama3.2:3b-instruct-q4_0" 
 
-        
         script_dir = os.path.dirname(os.path.abspath(__file__))
         os.chdir(script_dir)
         with open("cache.json", "r") as f:
             self.cache = json.load(f)
+
+    def initialize_ollama(self):
+        """Initialize Ollama client with retry logic"""
+        self.ollama_client = ollama.Client(host='http://ollama:11434') 
+        self.ollama_model = "llama3.2:3b-instruct-q4_0"
+        
+        max_retries = 15
+        for attempt in range(max_retries):
+            try:
+                models = self.ollama_client.list()
+                available_models = [model['name'] for model in models['models']]
+                
+                if  self.ollama_model in available_models:
+                    logger.info(f"Ollama initialized successfully. Model {self.ollama_model} is available")
+                    return
+                else:
+                    logger.warning(f"Model {self.ollama_model} not found. Available: {available_models}")
+                    
+            except Exception as e:
+                logger.debug(f"Ollama connection attempt {attempt + 1}/{max_retries}: {e}")
+                
+            if attempt == max_retries - 1:
+                raise Exception(f"Could not connect to Ollama after {max_retries} attempts")
+                
+            time.sleep(3)
 
     def save_cache(self):
         with open("cache.json", "w") as f:
@@ -115,7 +142,7 @@ class Rag:
         )
         logger.debug(f"Recipe generation prompt:\n{prompt}")
 
-        response = ollama.chat(
+        response = self.ollama_client.chat(
             model=self.ollama_model,
             messages=[
                 {"role": "user", "content": prompt}
@@ -137,7 +164,7 @@ class Rag:
             f"Only return the string.\n\n"
             f"Request: {self.raw_query}"
         )
-        response = ollama.chat(
+        response = self.ollama_client.chat(
             model=self.ollama_model,
             messages=[
                 {"role": "user", "content": prompt}
@@ -170,7 +197,7 @@ class Rag:
             f"Restrictions: {' '.join(context.get('restrictions', []))}\n\n"
             f"Request: {self.raw_query}"
         )
-        response = ollama.chat(
+        response = self.ollama_client.chat(
             model=self.ollama_model,
             messages=[
                 {"role": "user", "content": prompt}
@@ -192,9 +219,6 @@ class Rag:
         elif task == "output_query":
             logger.info(self.natural_language_output_query())
         
-            
-rag = Rag()
-
 if __name__ == "__main__":
     rag = Rag()
     try:
