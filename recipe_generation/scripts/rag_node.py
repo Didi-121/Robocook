@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
 from sentence_transformers import SentenceTransformer
 import ollama
 import psycopg2
@@ -31,9 +35,8 @@ class Rag:
         self.ollama_client = ollama.Client(host='http://ollama:11434') 
         self.ollama_model = "llama3.2:3b-instruct-q4_0" 
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        os.chdir(script_dir)
-        with open("cache.json", "r") as f:
+        cache_dir = "/workspace/recipe_generation/scripts/cache.json"
+        with open(cache_dir, "r") as f:
             self.cache = json.load(f)
 
     def initialize_ollama(self):
@@ -197,6 +200,7 @@ class Rag:
             f"Restrictions: {' '.join(context.get('restrictions', []))}\n\n"
             f"Request: {self.raw_query}"
         )
+        logger.info(f"Output query prompt:\n{prompt}")
         response = self.ollama_client.chat(
             model=self.ollama_model,
             messages=[
@@ -213,26 +217,53 @@ class Rag:
         logger.debug(f"Classified task: {task}")
 
         if task == "generate_recipe":
-            logger.info(self.generate_recipe())
+            return self.generate_recipe()
         elif task == "input_query":
-            logger.info(self.natural_language_input_query())
+            return self.natural_language_input_query()
         elif task == "output_query":
-            logger.info(self.natural_language_output_query())
-        
-if __name__ == "__main__":
-    rag = Rag()
+            return self.natural_language_output_query()
+
+class RagNode(Node):
+    def __init__(self):
+        super().__init__('rag_node')
+        logger.info("Initializing ROS node")
+        self.rag = Rag()
+        self.sub = self.create_subscription(String, 'rag/request', self.handle_request, 10)
+        self.pub = self.create_publisher(String, 'rag/response', 10)
+
+    def handle_request(self, msg: String):
+        try:
+            logger.info(f"Received request: {msg.data}")
+            data = msg.data.strip().lower()
+            if data == 'exit':
+                logger.info('Exit command received, shutting down node...')
+                rclpy.shutdown()
+                return
+            response = self.rag.start(data)
+            self.pub.publish(String(data=response))
+            logger.info("Response published: " + response)
+
+        except Exception as e:
+            logger.error(f"Error handling request: {e}")
+            self.pub.publish(String(data="An error occurred"))
+
+def main():
+    rclpy.init()
+    node = RagNode()
     try:
-        while True:
-            user_input = input("Enter your request (or 'exit' to quit): ")
-            if user_input.lower() == 'exit':
-                break
-            rag.start(user_input)
-    except Exception as e:
-        logger.error(f"An error occurred: {e}")
-        print("An error occurred. Please try again.")
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        logger.info("Exit by keyboard interrupt")
     finally:
-        logger.debug("Closing database connection")
-        rag.cur.close()
-        rag.conn.close()
+        logger.info("Shutting down; closing DB")
+        node.rag.cur.close()
+        node.rag.conn.close()
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()
 
 # Im Luna and i want something with apple 
+# Does luna likes apples ? 
+# Luna loves pineapple
