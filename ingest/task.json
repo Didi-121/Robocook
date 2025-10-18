@@ -11,5 +11,17 @@
   "output_query": [
     "tell me the preferences of person",
     "tell me if person likes food"
+  ],
+  "get_current_time": [
+    "What is the current time?",
+    "Can you tell me the time now?",
+    "time",
+    "what time is it?"
+  ],
+  "get_current_date": [
+    "What is the current date?",
+    "Can you tell me the date today?",
+    "date",
+    "what is the date?"
   ]
 }

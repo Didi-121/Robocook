@@ -9,6 +9,7 @@ import logging
 import json
 import os
 import time 
+from datetime import datetime
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -36,6 +37,9 @@ class Rag:
         self.ollama_model = "llama3.2:3b-instruct-q4_0" 
 
         cache_dir = "/workspace/recipe_generation/scripts/cache.json"
+        if not os.path.exists(cache_dir):
+            with open(cache_dir, "w") as f:
+                json.dump({}, f)
         with open(cache_dir, "r") as f:
             self.cache = json.load(f)
 
@@ -190,7 +194,7 @@ class Rag:
     def natural_language_output_query(self) -> str:
         context = self.hybrid_retrieval()
         prompt = (
-            f"You will receive a natural language request.\n"
+            f"You will answer a question.\n"
             f"Use only the information provided in the context below to answer.\n"
             f"Do not invent ingredients, preferences, or restrictions that are not listed.\n"
             f"Respond clearly and concisely based on the context.\n\n"
@@ -198,7 +202,7 @@ class Rag:
             f"Available ingredients: {' '.join(context.get('ingredients', []))}\n"
             f"Preferences: {' '.join(context.get('preferences', []))}\n"
             f"Restrictions: {' '.join(context.get('restrictions', []))}\n\n"
-            f"Request: {self.raw_query}"
+            f"the question is: {self.raw_query}"
         )
         logger.info(f"Output query prompt:\n{prompt}")
         response = self.ollama_client.chat(
@@ -208,6 +212,12 @@ class Rag:
             ]
         )
         return response["message"]["content"]
+    
+    def get_current_time(self):
+        return datetime.now().strftime("%H:%M:%S")
+    
+    def get_current_date(self):
+        return datetime.now().strftime("%d-%m-%Y")
 
     def start(self, input_text):
         self.raw_query = input_text
@@ -222,6 +232,10 @@ class Rag:
             return self.natural_language_input_query()
         elif task == "output_query":
             return self.natural_language_output_query()
+        elif task == "get_current_time":
+            logger.info(f"Current time is: {self.get_current_time()}")
+        elif task == "get_current_date":
+            logger.info(f"Current date is: {self.get_current_date()}")
 
 class RagNode(Node):
     def __init__(self):
@@ -263,7 +277,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# Im Luna and i want something with apple 
-# Does luna likes apples ? 
-# Luna loves pineapple

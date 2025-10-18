@@ -1,6 +1,6 @@
 FROM osrf/ros:humble-desktop
 
-# Install Python dependencies
+# # Install Python dependencies
 RUN apt-get update && apt-get install -y \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
@@ -10,7 +10,8 @@ WORKDIR /workspace
 
 COPY recipe_generation/requirements.txt .
 RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir -r requirements.txt
-       
+    pip3 install --no-cache-dir --ignore-installed -r requirements.txt
+
+
 COPY . .
 CMD ["bash"]
