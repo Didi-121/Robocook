@@ -214,10 +214,10 @@ class Rag:
         return response["message"]["content"]
     
     def get_current_time(self):
-        return datetime.now().strftime("%H:%M:%S")
+        return str( datetime.now().strftime("%H:%M:%S") ) 
     
     def get_current_date(self):
-        return datetime.now().strftime("%d-%m-%Y")
+        return str ( datetime.now().strftime("%d-%m-%Y") )
 
     def start(self, input_text):
         self.raw_query = input_text
@@ -234,8 +234,10 @@ class Rag:
             return self.natural_language_output_query()
         elif task == "get_current_time":
             logger.info(f"Current time is: {self.get_current_time()}")
+            return self.get_current_time()
         elif task == "get_current_date":
             logger.info(f"Current date is: {self.get_current_date()}")
+            return self.get_current_date()
 
 class RagNode(Node):
     def __init__(self):
